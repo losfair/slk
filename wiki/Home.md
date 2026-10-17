@@ -20,6 +20,8 @@ Marketing site: [getslk.sh](https://getslk.sh) · Source: [github.com/gammons/sl
 
 ## Reference
 
+- **[[Local API|Local-API]]** — Unix-socket HTTP access for scripts and local tools.
+
 - **[[Tradeoffs and Non-Goals|Tradeoffs-and-Non-Goals]]** — what's on the roadmap, what's out of scope, known caveats.
 - **[[Architecture]]** — service-oriented layout, data layer, render pipeline.
 

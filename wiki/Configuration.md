@@ -12,6 +12,11 @@ use_slack_sections = true       # use real Slack sidebar sections (default).
 download_dir = "~/Downloads"    # where file attachments (`d` keybinding) are
                                 # saved. "~" is expanded to your home directory.
 
+[local_api]
+enabled = false             # set true for local HTTP read/write access; no auth token
+# socket_path = "/home/me/.local/run/slk/api.sock"  # optional private Unix socket
+# See [[Local API|Local-API]] for discovery, endpoints and retry semantics.
+
 [appearance]
 theme = "dracula"
 timestamp_format = "3:04 PM"

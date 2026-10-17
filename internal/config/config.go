@@ -13,7 +13,15 @@ import (
 	toml "github.com/pelletier/go-toml/v2"
 )
 
+// LocalAPI enables read/write HTTP access over a private Unix socket.
+// Filesystem permissions are the access boundary; there are no API tokens.
+type LocalAPI struct {
+	Enabled    bool   `toml:"enabled"`
+	SocketPath string `toml:"socket_path"`
+}
+
 type Config struct {
+	LocalAPI      LocalAPI              `toml:"local_api"`
 	General       General               `toml:"general"`
 	Appearance    Appearance            `toml:"appearance"`
 	Animations    Animations            `toml:"animations"`

@@ -1,0 +1,981 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "slk local API",
+    "version": "1.0.0",
+    "description": "HTTP/JSON over a private Unix socket in a running slk TUI on macOS/Linux. No API authentication or separate write enablement. Filesystem permissions are the access boundary. POST requires an instance header and idempotency key for safe retries; neither is an authentication token. See Local-API.md for lifecycle, limits, response ordering and retry semantics."
+  },
+  "servers": [
+    {
+      "url": "http://slk.local",
+      "description": "Synthetic HTTP host; connect over the discovered Unix socket. No TCP listener."
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/v1/status": {
+      "get": {
+        "operationId": "status",
+        "summary": "Local API status and instance discovery",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Status"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "get": {
+        "operationId": "workspaces",
+        "summary": "Local workspace bootstrap states",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Workspace"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{team}/conversations": {
+      "get": {
+        "operationId": "conversations",
+        "summary": "Joined non-archived conversations",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Conversation"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "openConversation",
+        "summary": "Open/find a DM or group DM without navigating the TUI",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/OpenResult"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/Instance"
+          },
+          {
+            "$ref": "#/components/parameters/Idempotency"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{team}/conversations/{channel}": {
+      "get": {
+        "operationId": "conversation",
+        "summary": "Conversation metadata",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Conversation"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/Channel"
+          }
+        ]
+      }
+    },
+    "/v1/workspaces/{team}/conversations/{channel}/messages": {
+      "get": {
+        "operationId": "history",
+        "summary": "Top-level channel history, newest first",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/Channel"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "oldest",
+            "in": "query",
+            "description": "Exclusive decimal Slack timestamp bound.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,20}\\.[0-9]{1,9}$"
+            }
+          },
+          {
+            "name": "latest",
+            "in": "query",
+            "description": "Exclusive decimal Slack timestamp bound.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,20}\\.[0-9]{1,9}$"
+            }
+          }
+        ]
+      },
+      "post": {
+        "operationId": "sendMessage",
+        "summary": "Post a message or thread reply",
+        "responses": {
+          "201": {
+            "description": "Slack acknowledged the message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Message"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/Channel"
+          },
+          {
+            "$ref": "#/components/parameters/Instance"
+          },
+          {
+            "$ref": "#/components/parameters/Idempotency"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{team}/conversations/{channel}/threads/{thread_ts}/replies": {
+      "get": {
+        "operationId": "replies",
+        "summary": "Thread replies oldest first; parent separately in meta.parent",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/Channel"
+          },
+          {
+            "$ref": "#/components/parameters/Thread"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ]
+      }
+    },
+    "/v1/workspaces/{team}/search": {
+      "get": {
+        "operationId": "search",
+        "summary": "Slack indexed workspace search in relevance order",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Message"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Nonblank Slack search syntax, at most 4096 UTF-8 bytes."
+          }
+        ]
+      }
+    },
+    "/v1/workspaces/{team}/users/{user}": {
+      "get": {
+        "operationId": "user",
+        "summary": "Minimal user profile without contact details",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/Meta"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Team"
+          },
+          {
+            "$ref": "#/components/parameters/User"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Workspace": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "connecting",
+              "ready",
+              "unavailable"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "team_id",
+          "name",
+          "state"
+        ]
+      },
+      "Conversation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_im": {
+            "type": "boolean"
+          },
+          "is_mpim": {
+            "type": "boolean"
+          },
+          "is_private": {
+            "type": "boolean"
+          },
+          "is_member": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "is_im",
+          "is_mpim",
+          "is_private",
+          "is_member"
+        ]
+      },
+      "File": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "permalink": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title"
+        ]
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "real_name": {
+            "type": "string"
+          },
+          "is_bot": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "display_name",
+          "real_name",
+          "is_bot",
+          "deleted"
+        ]
+      },
+      "OpenRequest": {
+        "type": "object",
+        "properties": {
+          "user_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "user_ids"
+        ]
+      },
+      "OpenResult": {
+        "type": "object",
+        "properties": {
+          "channel_id": {
+            "type": "string"
+          },
+          "already_open": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "channel_id",
+          "already_open"
+        ]
+      },
+      "SendRequest": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Nonblank UTF-8 compose text, at most 32768 bytes. Uses slk CommonMark-like conversion, not raw Slack mrkdwn."
+          },
+          "thread_ts": {
+            "type": "string",
+            "pattern": "^[0-9]{1,20}\\.[0-9]{1,9}$"
+          },
+          "broadcast": {
+            "type": "boolean",
+            "default": false,
+            "description": "Requires thread_ts when true."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "text"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "broadcast": {
+                  "const": true
+                }
+              },
+              "required": [
+                "broadcast"
+              ]
+            },
+            "then": {
+              "required": [
+                "thread_ts"
+              ]
+            }
+          }
+        ]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ]
+      },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "const": "v1"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "starting",
+              "ready",
+              "unavailable"
+            ]
+          },
+          "instance_id": {
+            "type": "string"
+          },
+          "api_versions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "idempotency_retention_seconds": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "state",
+          "instance_id",
+          "api_versions",
+          "capabilities",
+          "idempotency_retention_seconds"
+        ]
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "team_id": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "string"
+          },
+          "ts": {
+            "type": "string"
+          },
+          "thread_ts": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bot_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "text_format": {
+            "type": "string",
+            "const": "slack_mrkdwn"
+          },
+          "subtype": {
+            "type": "string"
+          },
+          "reply_count": {
+            "type": "integer"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/File"
+            }
+          },
+          "has_blocks": {
+            "type": "boolean"
+          },
+          "has_attachments": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "team_id",
+          "channel_id",
+          "ts",
+          "thread_ts",
+          "user_id",
+          "bot_id",
+          "text",
+          "text_format",
+          "subtype",
+          "reply_count",
+          "files",
+          "has_blocks",
+          "has_attachments"
+        ]
+      },
+      "Meta": {
+        "type": "object",
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "local",
+              "slack"
+            ]
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent": {
+            "$ref": "#/components/schemas/Message"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "request_id",
+          "source"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/Error"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "meta"
+        ]
+      }
+    },
+    "parameters": {
+      "Team": {
+        "name": "team",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Explicit Slack workspace ID, independent of TUI focus."
+      },
+      "Channel": {
+        "name": "channel",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "User": {
+        "name": "user",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Thread": {
+        "name": "thread_ts",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]{1,20}\\.[0-9]{1,9}$"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 50
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        },
+        "description": "Opaque cursor. Keep route, filters and page size unchanged; invalid after server restart."
+      },
+      "Instance": {
+        "name": "X-Slk-Instance",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Current public instance ID from discovery or GET /v1/status. Not an authentication credential."
+      },
+      "Idempotency": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[!-~]+$"
+        },
+        "description": "Keep this key when retrying the same intended operation."
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Sanitized error. 400 invalid input/cursor, 403 access, 404 missing, 405 method, 409 instance/key conflict or uncertain write, 413 body limit, 415 content type, 429 local/upstream limit, 502 Slack failure, 503 unavailable/auth expiry/capacity, 504 read timeout. An uncertain write uses 409 outcome_unknown and must not be automatically resent.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait on throttling or pending writes.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "Cache-Control": {
+            "schema": {
+              "type": "string",
+              "const": "no-store"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  }
+}

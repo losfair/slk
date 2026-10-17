@@ -1,0 +1,4 @@
+interface:
+  display_name: "slk Local API"
+  short_description: "Read and write Slack through slk’s local Unix socket"
+  default_prompt: "Use $slk-api to work with Slack through the running slk session."

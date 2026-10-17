@@ -24,6 +24,9 @@ import (
 // SlackAPI defines the subset of the Slack API we use.
 // This interface enables mocking in tests.
 type SlackAPI interface {
+	GetConversationsForUserContext(context.Context, *slack.GetConversationsForUserParameters) ([]slack.Channel, string, error)
+	GetConversationHistoryContext(context.Context, *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error)
+	GetConversationRepliesContext(context.Context, *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error)
 	GetConversationsForUser(params *slack.GetConversationsForUserParameters) ([]slack.Channel, string, error)
 	GetConversationHistory(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error)
 	GetConversationReplies(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error)
@@ -766,17 +769,10 @@ func (c *Client) GetHistoryAround(ctx context.Context, channelID, ts string, lim
 // verbatim, so Slack-side modifiers (from:, in:, before:, ...) work
 // unmodified. Results are relevance-sorted (Slack's default).
 func (c *Client) SearchMessages(ctx context.Context, query string, count int) (*slack.SearchMessages, error) {
-	params := slack.NewSearchParameters()
-	// Non-positive counts would be forwarded to Slack as count=0;
-	// keep slack-go's default (20) instead.
-	if count > 0 {
-		params.Count = count
+	if count <= 0 {
+		count = slack.NewSearchParameters().Count
 	}
-	res, err := c.api.SearchMessagesContext(ctx, query, params)
-	if err != nil {
-		return nil, fmt.Errorf("searching messages: %w", err)
-	}
-	return res, nil
+	return c.SearchMessagesPage(ctx, query, count, 1)
 }
 
 // GetHistorySince fetches all messages newer than `oldest` in the
@@ -914,7 +910,7 @@ func (c *Client) SendMessage(ctx context.Context, channelID, text string) (strin
 	if block != nil {
 		opts = append(opts, slack.MsgOptionBlocks(block))
 	}
-	_, ts, err := c.api.PostMessage(channelID, opts...)
+	_, ts, err := c.api.PostMessageContext(ctx, channelID, opts...)
 	if err != nil {
 		return "", "", fmt.Errorf("sending message: %w", err)
 	}
@@ -1145,7 +1141,7 @@ func (c *Client) SendReply(ctx context.Context, channelID, threadTS, text string
 	if broadcast {
 		opts = append(opts, slack.MsgOptionBroadcast())
 	}
-	_, ts, err := c.api.PostMessage(channelID, opts...)
+	_, ts, err := c.api.PostMessageContext(ctx, channelID, opts...)
 	if err != nil {
 		return "", "", fmt.Errorf("sending reply: %w", err)
 	}

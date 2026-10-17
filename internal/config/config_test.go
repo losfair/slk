@@ -1020,3 +1020,17 @@ team_id = "T04T4TH8W"
 		t.Errorf("VersionTS = %q; want empty when unset", got)
 	}
 }
+
+func TestLocalAPIConfig(t *testing.T) {
+	if Default().LocalAPI.Enabled {
+		t.Fatal("local API must be opt-in")
+	}
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte("[local_api]\nenabled = true\nsocket_path = '/tmp/private-slk/api.sock'\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil || !cfg.LocalAPI.Enabled || cfg.LocalAPI.SocketPath != "/tmp/private-slk/api.sock" {
+		t.Fatalf("%+v %v", cfg.LocalAPI, err)
+	}
+}

@@ -169,6 +169,16 @@ func (m *mockSlackAPI) SearchMessagesContext(ctx context.Context, query string, 
 	return &slack.SearchMessages{}, nil
 }
 
+func (m *mockSlackAPI) GetConversationsForUserContext(_ context.Context, params *slack.GetConversationsForUserParameters) ([]slack.Channel, string, error) {
+	return m.GetConversationsForUser(params)
+}
+func (m *mockSlackAPI) GetConversationHistoryContext(_ context.Context, params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+	return m.GetConversationHistory(params)
+}
+func (m *mockSlackAPI) GetConversationRepliesContext(_ context.Context, params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error) {
+	return m.GetConversationReplies(params)
+}
+
 func (m *mockSlackAPI) GetConversationsForUser(params *slack.GetConversationsForUserParameters) ([]slack.Channel, string, error) {
 	return nil, "", nil
 }

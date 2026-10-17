@@ -30,6 +30,7 @@ import (
 	"github.com/gammons/slk/internal/filedl"
 	"github.com/gammons/slk/internal/ids"
 	imgpkg "github.com/gammons/slk/internal/image"
+	"github.com/gammons/slk/internal/localapi"
 	"github.com/gammons/slk/internal/notify"
 	"github.com/gammons/slk/internal/service"
 	slackclient "github.com/gammons/slk/internal/slack"
@@ -596,6 +597,15 @@ func run() error {
 	// Most wireCallbacks-registered callbacks read router.Active() at
 	// invocation time; forwarding instead uses the captured team ID.
 	router := newWorkspaceRouter()
+	apiBackend := newLocalAPIBackend(router, tokens)
+	var apiServer *localapi.Server
+	if cfg.LocalAPI.Enabled {
+		apiServer, err = localapi.Start(cfg.LocalAPI.SocketPath, apiBackend)
+		if err != nil {
+			return fmt.Errorf("starting local API: %w", err)
+		}
+		defer apiServer.Close()
+	}
 
 	// Wire avatar rendering with a lazy-fetch path. AvatarFunc is
 	// called by the messages/thread panes on the bubbletea Update
@@ -1571,11 +1581,13 @@ func run() error {
 				// nothing at all.
 				log.Printf("workspace %s failed to connect: %v", tok.TeamName, err)
 				debuglog.General("workspace %s failed to connect: %v", tok.TeamName, err)
+				apiBackend.setWorkspace(tok.TeamID, tok.TeamName, "unavailable")
 				p.Send(ui.WorkspaceFailedMsg{TeamName: tok.TeamName})
 				return
 			}
 
 			router.Add(wctx)
+			apiBackend.setWorkspace(wctx.TeamID, wctx.TeamName, "ready")
 			wsMgr.AddWorkspace(wctx.TeamID, wctx.TeamName, "")
 
 			// Decide whether this workspace becomes the active one.
@@ -1745,6 +1757,9 @@ func run() error {
 	}).Run(wakeCtx)
 
 	_, err = p.Run()
+	if apiServer != nil {
+		_ = apiServer.Close()
+	}
 	shutdown(app, router)
 
 	return err
